@@ -1,10 +1,10 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Login from './auth/Login'
 import ProtectedRoute from './components/ProtectedRoute'
-import AdminLayout from './components/AdminLayout'
+import Admin from './page/admin'
 import Titulado from './page/titulado'
 import Dashboard from './feature/admin/Dashboard'
-
+import Encuesta from './feature/titulados/EncuestaWizard'
 
 
 
@@ -20,10 +20,11 @@ function App() {
 
       {/* 2. Ruta Pública: Acceso de inicio de sesión */}
       <Route path="/login" element={<Login />} />
+      <Route path="/encuesta-titulados" element={<Encuesta />} />
 
       {/* 3. Rutas Protegidas del Admin con Sidebar */}
       <Route element={<ProtectedRoute />}>
-        <Route path="/admin" element={<AdminLayout />}>
+        <Route path="/admin" element={<Admin />}>
           {/* Al entrar a /admin se muestra el Dashboard */}
           <Route index element={<Dashboard />} />
           

@@ -5,6 +5,7 @@ import Admin from './page/admin'
 import Titulado from './page/titulado'
 import Dashboard from './feature/admin/Dashboard'
 import Encuesta from './feature/titulados/EncuestaWizard'
+import ReportesAcreditacion from './feature/admin/ReportesAcreditacion'
 
 
 
@@ -27,9 +28,10 @@ function App() {
         <Route path="/admin" element={<Admin />}>
           {/* Al entrar a /admin se muestra el Dashboard */}
           <Route index element={<Dashboard />} />
+
           
-          {/* Más adelante aquí irán las subpantallas: */}
-          {/* <Route path="reportes" element={<Reportes />} /> */}
+          {/* Pantalla de Reportes y Matrices (HU 5) */}
+          <Route path="reportes" element={<ReportesAcreditacion />} />
         </Route>
       </Route>
 

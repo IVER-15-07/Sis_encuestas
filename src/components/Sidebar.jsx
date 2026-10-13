@@ -7,14 +7,20 @@ const Sidebar = () => {
 
   const handleCerrarSesion = () => {
     logout()
-    navigate('/') // Redirige directamente al inicio público de la encuesta
+    navigate('/')
   }
+
+  const renderNavClasses = ({ isActive }) =>
+    `relative flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+      isActive
+        ? 'bg-[#152e59] text-white shadow-inner'
+        : 'text-slate-400 hover:bg-[#121f38] hover:text-slate-200'
+    }`
 
   return (
     <aside className="w-64 bg-[#0a1120] text-slate-300 flex flex-col justify-between h-screen sticky top-0 border-r border-[#15233e] select-none p-4">
       <div className="space-y-6">
-        
-        {/* Encabezado: Birrete Académico sobrio y profesional */}
+        {/* Encabezado: Birrete Académico institucional */}
         <div className="flex items-center gap-3 px-1 pt-1">
           <div className="w-10 h-10 rounded-xl bg-[#1d4ed8] border border-blue-400/20 flex items-center justify-center flex-shrink-0 shadow-sm">
             <svg
@@ -47,17 +53,8 @@ const Sidebar = () => {
           </p>
 
           <nav className="space-y-1">
-            <NavLink
-              to="/admin"
-              end
-              className={({ isActive }) =>
-                `relative flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                  isActive
-                    ? 'bg-[#152e59] text-white shadow-inner'
-                    : 'text-slate-400 hover:bg-[#121f38] hover:text-slate-200'
-                }`
-              }
-            >
+            {/* 1. Resumen Ejecutivo (Inicio del Panel) */}
+            <NavLink to="/admin" end className={renderNavClasses}>
               {({ isActive }) => (
                 <>
                   {isActive && (
@@ -70,7 +67,6 @@ const Sidebar = () => {
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
                     >
                       <path
                         strokeLinecap="round"
@@ -82,9 +78,37 @@ const Sidebar = () => {
                     <span>Resumen Ejecutivo</span>
                   </div>
 
+                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                </>
+              )}
+            </NavLink>
+
+            {/* 2. HU 5: Reportes y Matrices de Frecuencia */}
+            <NavLink to="/admin/reportes" className={renderNavClasses}>
+              {({ isActive }) => (
+                <>
                   {isActive && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-500 rounded-r-md" />
                   )}
+
+                  <div className="flex items-center gap-3">
+                    <svg
+                      className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-slate-400'}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    <span>Reportes & Matrices</span>
+                  </div>
+
+                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
                 </>
               )}
             </NavLink>
@@ -103,7 +127,6 @@ const Sidebar = () => {
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
           >
             <path
               strokeLinecap="round"

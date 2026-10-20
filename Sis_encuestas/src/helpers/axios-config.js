@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const axiosInstance = axios.create({
   baseURL: 'http://localhost:8282',
-  timeout: 15000,
+  timeout: 60000,
 });
 
 // Interceptor para inyectar automáticamente el token en cada petición

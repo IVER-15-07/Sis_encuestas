@@ -6,6 +6,7 @@ import Titulado from './page/titulado'
 import Dashboard from './feature/admin/dashboar/Dashboard'
 import Encuesta from './feature/titulados/EncuestaWizard'
 import ReportesAcreditacion from './feature/admin/ReportesAcreditacion'
+//import Historico from './feature/admin/historico/HistoricoDatos'
 
 
 

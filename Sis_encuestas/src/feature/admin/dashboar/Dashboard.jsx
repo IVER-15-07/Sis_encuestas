@@ -1,199 +1,126 @@
-// feature/admin/dashboar/Dashboard.jsx
-import  { useState, useMemo } from 'react';
-import CsvUploader from './components/CsvUploader';
-import DynamicFilters from './components/DynamicFilters';
-import AnalyticsCharts from './components/AnalyticsCharts';
-import {
-  calcularMedia,
-  calcularMediana,
-  calcularDesviacionEstandar
-} from './components/StatisticalEngine';
-import { Download, FileText, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { CsvUploader } from './components/CsvUploader';
+import { AnalyticsCharts } from './components/AnalyticsCharts';
+import { analisisService } from '../../../services/analisis';
+import { BarChart3, Filter } from 'lucide-react';
 
-export default function Dashboard() {
-  const [datosTitulados, setDatosTitulados] = useState([]);
-  const [datosEmpleadores, setDatosEmpleadores] = useState([]);
-  const [modo, setModo] = useState('empleadores'); // 'titulados' | 'empleadores' | 'cruzado'
-  const [filtrosActivos, setFiltrosActivos] = useState({});
+export const Dashboard = () => {
+  const [variableFila, setVariableFila] = useState('edad');
+  const [variableColumna, setVariableColumna] = useState('situacion');
+  const [dataChi, setDataChi] = useState(null);
+  const [calculando, setCalculando] = useState(false);
+  const [errorAnalisis, setErrorAnalisis] = useState('');
 
-  // Carga según archivo
-  const manejarDatosCargados = (datos, tipo) => {
-    if (tipo === 'empleadores') {
-      setDatosEmpleadores(datos);
-      setModo('empleadores');
-    } else {
-      setDatosTitulados(datos);
-      setModo('titulados');
+  const variablesDisponibles = [
+    { id: 'edad', label: 'Rango de Edad' },
+    { id: 'genero', label: 'Género' },
+    { id: 'situacion', label: 'Situación Laboral' },
+    { id: 'rubro', label: 'Rubro de la Empresa' },
+    { id: 'sector', label: 'Sector (Público/Privado)' },
+    { id: 'cargo', label: 'Cargo que Ocupa' },
+    { id: 'remuneracion', label: 'Rango Salarial' },
+  ];
+
+  const handleCalcular = async () => {
+    if (variableFila === variableColumna) {
+      setErrorAnalisis('Debes seleccionar dos variables distintas para el cruce.');
+      return;
     }
-    setFiltrosActivos({});
-  };
 
-  // Conjunto de datos base activo
-  const datosBase = useMemo(() => {
-    if (modo === 'empleadores') return datosEmpleadores;
-    if (modo === 'titulados') return datosTitulados;
-    // Modo Cruzado: une registros emparejados por rubro / área
-    return [...datosEmpleadores, ...datosTitulados];
-  }, [modo, datosEmpleadores, datosTitulados]);
-
-  // Generador de filtros dinámicos según el modo seleccionado
-  const filtrosDisponibles = useMemo(() => {
-    if (!datosBase.length) return [];
-    const llaves = Object.keys(datosBase[0]);
-
-    return llaves
-      .map(clave => {
-        const opciones = Array.from(new Set(datosBase.map(d => String(d[clave] || '')).filter(Boolean)));
-        return {
-          clave,
-          label: clave.length > 25 ? clave.substring(0, 25) + '...' : clave,
-          opciones
-        };
-      })
-      .filter(f => f.opciones.length > 1 && f.opciones.length <= 30);
-  }, [datosBase]);
-
-  const cambiarFiltro = (clave, valor) => {
-    setFiltrosActivos(prev => ({
-      ...prev,
-      [clave]: valor
-    }));
-  };
-
-  // Filtrado reactivo en memoria
-  const datosFiltrados = useMemo(() => {
-    return datosBase.filter(row => {
-      for (const [clave, val] of Object.entries(filtrosActivos)) {
-        if (val !== 'TODOS' && String(row[clave]) !== String(val)) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [datosBase, filtrosActivos]);
-
-  // Estadísticas numéricas calculadas en vivo
-  const metricasDescriptivas = useMemo(() => {
-    if (!datosFiltrados.length) return null;
-    // Buscar columnas numéricas (ej. antiguedad, salarios, años)
-    const primeraFila = datosFiltrados[0];
-    const colNum = Object.keys(primeraFila).find(k => typeof primeraFila[k] === 'number');
-
-    if (!colNum) return null;
-    const valores = datosFiltrados.map(d => Number(d[colNum])).filter(n => !isNaN(n));
-    const media = calcularMedia(valores);
-    const mediana = calcularMediana(valores);
-    const desviacion = calcularDesviacionEstandar(valores, media);
-
-    return { colNum, media, mediana, desviacion };
-  }, [datosFiltrados]);
-
-  // Exportar Mini-Informe en HTML / Impresión del docente
-  const exportarMiniInforme = () => {
-    const ventana = window.open('', '_blank');
-    ventana.document.write(`
-      <html>
-        <head>
-          <title>Mini Informe ARCUSUR - Segmentación de Mercado</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 24px; color: #1e293b; }
-            h2 { color: #2563eb; }
-            table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-            th, td { border: 1px solid #cbd5e1; padding: 8px; font-size: 12px; text-align: left; }
-            th { background-color: #f1f5f9; }
-          </style>
-        </head>
-        <body>
-          <h2>Informe Estadístico de Encuestas - UMSS</h2>
-          <p><b>Modo de Análisis:</b> ${modo.toUpperCase()}</p>
-          <p><b>Filtros Aplicados:</b> ${JSON.stringify(filtrosActivos)}</p>
-          <p><b>Muestra Filtrada:</b> ${datosFiltrados.length} registros</p>
-          ${metricasDescriptivas ? `
-            <p><b>Variable Numérica Analizada:</b> ${metricasDescriptivas.colNum}</p>
-            <p><b>Media:</b> ${metricasDescriptivas.media} | <b>Mediana:</b> ${metricasDescriptivas.mediana} \vert{} <b>Desv. Estándar:</b> ${metricasDescriptivas.desviacion}</p>
-          ` : ''}
-          <button onclick="window.print()">Imprimir / Guardar en PDF</button>
-        </body>
-      </html>
-    `);
-    ventana.document.close();
+    setCalculando(true);
+    setErrorAnalisis('');
+    try {
+      const resp = await analisisService.calcularChiCuadrado(variableFila, variableColumna);
+      setDataChi(resp);
+    } catch (err) {
+      setErrorAnalisis(err.message);
+    } finally {
+      setCalculando(false);
+    }
   };
 
   return (
-    <div style={{ padding: '24px', backgroundColor: '#F8FAFC', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
-        <div>
-          <h2 style={{ margin: 0, color: '#0F172A', fontSize: '22px' }}>Panel Multivariable de Encuestas (ARCUSUR)</h2>
-          <p style={{ margin: '4px 0 0', color: '#64748B', fontSize: '13px' }}>
-            Filtros cruzados, medidas univariadas y correlaciones de independencia.
-          </p>
-        </div>
-
-        {datosFiltrados.length > 0 && (
-          <button
-            onClick={exportarMiniInforme}
-            style={{
-              backgroundColor: '#0F172A',
-              color: '#fff',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '13px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <FileText size={15} /> Exportar Mini-Informe
-          </button>
-        )}
+    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <div>
+        <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: '#0f172a', margin: '0 0 0.5rem 0' }}>
+          Panel de Encuestas y Análisis Estadístico
+        </h1>
+        <p style={{ color: '#64748b', margin: 0 }}>
+          Sube tus archivos de Microsoft Forms / Google Forms y analiza los resultados en tiempo real.
+        </p>
       </div>
 
-      {/* 1. Subidor de Archivos */}
-      <CsvUploader onCargaCompleta={manejarDatosCargados} />
+      {/* 1. Subidor de archivos */}
+      <CsvUploader onImportSuccess={() => handleCalcular()} />
 
-      {datosBase.length > 0 && (
-        <>
-          {/* 2. Barra de Filtros por Encuesta / Cruzado */}
-          <DynamicFilters
-            modo={modo}
-            setModo={setModo}
-            filtrosDisponibles={filtrosDisponibles}
-            filtrosActivos={filtrosActivos}
-            onCambiarFiltro={cambiarFiltro}
-            onResetear={() => setFiltrosActivos({})}
-            totalResultados={datosFiltrados.length}
-          />
+      {/* 2. Selector de variables para Chi-Cuadrado */}
+      <div style={{ background: '#ffffff', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600, color: '#334155' }}>
+          <Filter size={18} /> Cruce de Variables:
+        </div>
 
-          {/* Tarjetas de Medidas Estadísticas Numéricas */}
-          {metricasDescriptivas && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '20px' }}>
-              <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                <span style={{ fontSize: '11px', color: '#64748B' }}>Variable: {metricasDescriptivas.colNum}</span>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#0F172A' }}>Media: {metricasDescriptivas.media}</div>
-              </div>
-              <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                <span style={{ fontSize: '11px', color: '#64748B' }}>Mediana</span>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#0F172A' }}>{metricasDescriptivas.mediana}</div>
-              </div>
-              <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                <span style={{ fontSize: '11px', color: '#64748B' }}>Desviación Estándar</span>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#0F172A' }}>± {metricasDescriptivas.desviacion}</div>
-              </div>
-            </div>
-          )}
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <label style={{ fontSize: '0.85rem', color: '#64748b' }}>Variable 1 (Filas):</label>
+          <select
+            value={variableFila}
+            onChange={(e) => setVariableFila(e.target.value)}
+            style={{ padding: '0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+          >
+            {variablesDisponibles.map((v) => (
+              <option key={v.id} value={v.id}>{v.label}</option>
+            ))}
+          </select>
+        </div>
 
-          {/* 3. Panel de Múltiples Gráficas */}
-          <AnalyticsCharts
-            datos={datosFiltrados}
-            modo={modo}
-            variableX={filtrosDisponibles[0]?.clave || ''}
-            variableY={filtrosDisponibles[1]?.clave || ''}
-          />
-        </>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <label style={{ fontSize: '0.85rem', color: '#64748b' }}>Variable 2 (Columnas):</label>
+          <select
+            value={variableColumna}
+            onChange={(e) => setVariableColumna(e.target.value)}
+            style={{ padding: '0.45rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+          >
+            {variablesDisponibles.map((v) => (
+              <option key={v.id} value={v.id}>{v.label}</option>
+            ))}
+          </select>
+        </div>
+
+        <button
+          onClick={handleCalcular}
+          disabled={calculando}
+          style={{
+            padding: '0.5rem 1rem',
+            background: '#0f172a',
+            color: '#fff',
+            borderRadius: '6px',
+            border: 'none',
+            fontWeight: 600,
+            cursor: calculando ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            marginLeft: 'auto'
+          }}
+        >
+          <BarChart3 size={16} />
+          {calculando ? 'Calculando...' : 'Calcular Chi-cuadrado'}
+        </button>
+      </div>
+
+      {errorAnalisis && (
+        <div style={{ padding: '0.75rem', background: '#fee2e2', color: '#991b1b', borderRadius: '6px', fontSize: '0.9rem' }}>
+          {errorAnalisis}
+        </div>
       )}
+
+      {/* 3. Métricas y Gráficos */}
+      <AnalyticsCharts
+        dataChi={dataChi}
+        variableFila={variablesDisponibles.find((v) => v.id === variableFila)?.label}
+        variableColumna={variablesDisponibles.find((v) => v.id === variableColumna)?.label}
+      />
     </div>
   );
-}
+};
+
+export default Dashboard;

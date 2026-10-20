@@ -101,10 +101,10 @@ const Titulado = () => {
 
             {/* Botón Acción */}
             <button
-              onClick={() => navigate('/encuesta-titulados')}
-              className="w-full py-3 px-4 bg-[#0a58ca] hover:bg-[#094bb0] text-white text-xs font-semibold rounded-xl flex items-center justify-between transition-colors shadow-sm cursor-pointer"
+              disabled
+              className="w-full py-3 px-4 bg-slate-200 text-slate-500 text-xs font-semibold rounded-xl flex items-center justify-between cursor-not-allowed"
             >
-              <span>Comenzar encuesta</span>
+              <span>Encuesta temporalmente no disponible</span>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>

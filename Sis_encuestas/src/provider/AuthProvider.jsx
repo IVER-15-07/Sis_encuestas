@@ -1,6 +1,10 @@
 import { useState } from 'react'
-import { authService } from '../data/services/authService'
 import { AuthContext } from '../auth/AuthContext'
+
+const CREDENCIALES_ADMIN = {
+  usuario: 'admin',
+  password: 'admin123',
+}
 
 export const AuthProvider = ({ children }) => {
   const [usuario, setUsuario] = useState(() => {
@@ -14,7 +18,23 @@ export const AuthProvider = ({ children }) => {
   })
 
   const login = async (identificador, password) => {
-    const usuarioAutenticado = await authService.login(identificador, password)
+    if (!identificador || !password) {
+      throw new Error('Debe proporcionar usuario y contraseña.')
+    }
+
+    if (
+      identificador.trim() !== CREDENCIALES_ADMIN.usuario ||
+      password !== CREDENCIALES_ADMIN.password
+    ) {
+      throw new Error('Credenciales incorrectas.')
+    }
+
+    const usuarioAutenticado = {
+      usuario: CREDENCIALES_ADMIN.usuario,
+      nombreCompleto: 'Administrador',
+      rol: 'Administrador',
+    }
+
     setUsuario(usuarioAutenticado)
     localStorage.setItem('sesion_admin', JSON.stringify(usuarioAutenticado))
     return usuarioAutenticado

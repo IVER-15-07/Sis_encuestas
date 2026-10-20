@@ -17,7 +17,7 @@ const Login = () => {
     setCargando(true)
 
     try {
-      // Autentica mediante authService -> authRepository -> Supabase y actualiza AuthProvider
+      // Valida las credenciales estáticas y actualiza AuthProvider
       await login(usuario.trim(), password)
 
       // Redirige al panel administrativo protegido

@@ -3,7 +3,7 @@ import Login from './auth/Login'
 import ProtectedRoute from './components/ProtectedRoute'
 import Admin from './page/admin'
 import Titulado from './page/titulado'
-import Dashboard from './feature/admin/Dashboard'
+import Dashboard from './feature/admin/dashboar/Dashboard'
 import Encuesta from './feature/titulados/EncuestaWizard'
 import ReportesAcreditacion from './feature/admin/ReportesAcreditacion'
 

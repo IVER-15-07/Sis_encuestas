@@ -12,16 +12,42 @@ const extraerError = (error) => {
 const construirParamsFiltro = (filtros = {}, extra = {}) => {
   const params = new URLSearchParams();
 
+  // Filtros comunes y de Titulados
   if (filtros.importacionId) params.append('importacionId', filtros.importacionId);
   if (filtros.anioTitulacion) params.append('anioTitulacion', filtros.anioTitulacion);
   if (filtros.situacion && filtros.situacion !== 'Todos') params.append('situacion', filtros.situacion);
   if (filtros.sector && filtros.sector !== 'Todos') params.append('sector', filtros.sector);
   if (filtros.genero && filtros.genero !== 'Todos') params.append('genero', filtros.genero);
   if (filtros.edadRango && filtros.edadRango !== 'Todos') params.append('edadRango', filtros.edadRango);
-  if (filtros.interesadoPosgrado !== '' && filtros.interesadoPosgrado !== null && filtros.interesadoPosgrado !== undefined) {
+  if (
+    filtros.interesadoPosgrado !== '' &&
+    filtros.interesadoPosgrado !== null &&
+    filtros.interesadoPosgrado !== undefined
+  ) {
     params.append('interesadoPosgrado', filtros.interesadoPosgrado);
   }
   if (filtros.umbralAnios) params.append('umbralAnios', filtros.umbralAnios);
+
+  // Filtros específicos de Empleadores
+  if (filtros.tipoOrganizacion && filtros.tipoOrganizacion !== 'Todos') {
+    params.append('tipoOrganizacion', filtros.tipoOrganizacion);
+  }
+  if (filtros.tamano && filtros.tamano !== 'Todos') {
+    params.append('tamano', filtros.tamano);
+  }
+  if (filtros.rubro && filtros.rubro !== 'Todos') {
+    params.append('rubro', filtros.rubro);
+  }
+  if (
+    filtros.contratoUltimos5 !== '' &&
+    filtros.contratoUltimos5 !== null &&
+    filtros.contratoUltimos5 !== undefined
+  ) {
+    params.append('contratoUltimos5', filtros.contratoUltimos5);
+  }
+  if (filtros.probContratacion && filtros.probContratacion !== 'Todos') {
+    params.append('probContratacion', filtros.probContratacion);
+  }
 
   Object.entries(extra).forEach(([k, v]) => {
     if (v !== null && v !== undefined && v !== '') {
@@ -56,6 +82,8 @@ export const analisisService = {
       throw extraerError(error);
     }
   },
+
+  // ==================== MÓDULOS DE TITULADOS ====================
 
   // 3. Pestaña 1: Perfil de empleabilidad (5 subpestañas + umbral Junior/Consolidado)
   async obtenerPerfilEmpleabilidad(filtros = {}) {
@@ -143,7 +171,57 @@ export const analisisService = {
     }
   },
 
-  // 9. Exportar matriz cruzada + metadatos estadísticos en CSV
+  // ==================== MÓDULOS DE EMPLEADORES ====================
+
+  // 9. Pestaña 1 Empleadores: Valoración de la Carrera (18 afirmaciones / 6 dimensiones)
+  async obtenerValoracionCarreraEmpleadores(filtros = {}) {
+    try {
+      const params = construirParamsFiltro(filtros);
+      const { data } = await axiosInstance.get('/api/analisis/empleadores/valoracion-carrera', { params });
+      return data;
+    } catch (error) {
+      throw extraerError(error);
+    }
+  },
+
+  // 10. Pestaña 2 Empleadores: Brechas de competencias (Hard skills & Soft skills)
+  async obtenerBrechasCompetenciasEmpleadores(filtros = {}) {
+    try {
+      const params = construirParamsFiltro(filtros);
+      const { data } = await axiosInstance.get('/api/analisis/empleadores/brechas-competencias', { params });
+      return data;
+    } catch (error) {
+      throw extraerError(error);
+    }
+  },
+
+  // 11. Catálogo de variables cruzables de Empleadores con nivel de medición
+  async listarVariablesEmpleadores() {
+    try {
+      const { data } = await axiosInstance.get('/api/analisis/empleadores/variables');
+      return data;
+    } catch (error) {
+      throw extraerError(error);
+    }
+  },
+
+  // 12. Pestaña 3 Empleadores: Cruces (Mann-Whitney, Spearman, Fisher-Freeman-Halton)
+  async calcularCruceEmpleadores(variableFila, variableColumna, filtros = {}) {
+    try {
+      const params = construirParamsFiltro(filtros, {
+        variableFila,
+        variableColumna,
+      });
+      const { data } = await axiosInstance.post('/api/analisis/empleadores/cruce', null, { params });
+      return data;
+    } catch (error) {
+      throw extraerError(error);
+    }
+  },
+
+  // ==================== EXPORTACIÓN CSV ====================
+
+  // 13. Exportar matriz cruzada + metadatos estadísticos en CSV
   async descargarMatrizCruzadaCsv(encuesta = 'titulados', variableFila, variableColumna, importacionId = null) {
     try {
       const params = { encuesta, variableFila, variableColumna };

@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '',
-  timeout: 80000,
+  timeout: 200000,
 });
 
 // Interceptor para inyectar automáticamente el token en cada petición

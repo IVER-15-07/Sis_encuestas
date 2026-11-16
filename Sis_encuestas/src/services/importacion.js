@@ -1,17 +1,26 @@
 import axiosInstance from '../helpers/axios-config';
 
+const obtenerMensajeError = (error, tipo) => {
+  const data = error.response?.data;
+  const detalle = typeof data === 'string' ? data : data?.error || data?.message;
+
+  if (detalle) return detalle;
+  if (error.response?.status) {
+    return `Error al importar ${tipo} (HTTP ${error.response.status}): ${error.message}`;
+  }
+  return `No se pudo conectar con el servidor para importar ${tipo}: ${error.message || 'Error desconocido'}`;
+};
+
 export const importacionService = {
   async subirTitulados(archivo) {
     const formData = new FormData();
     formData.append('archivo', archivo);
 
     try {
-      const { data } = await axiosInstance.post('/api/importacion/titulados', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const { data } = await axiosInstance.post('/api/importacion/titulados', formData);
       return data;
     } catch (error) {
-      const mensaje = error.response?.data?.error || error.response?.data?.message || 'Error al importar titulados';
+      const mensaje = obtenerMensajeError(error, 'titulados');
       throw new Error(mensaje, { cause: error });
     }
   },
@@ -21,12 +30,10 @@ export const importacionService = {
     formData.append('archivo', archivo);
 
     try {
-      const { data } = await axiosInstance.post('/api/importacion/empleadores', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const { data } = await axiosInstance.post('/api/importacion/empleadores', formData);
       return data;
     } catch (error) {
-      const mensaje = error.response?.data?.error || error.response?.data?.message || 'Error al importar empleadores';
+      const mensaje = obtenerMensajeError(error, 'empleadores');
       throw new Error(mensaje, { cause: error });
     }
   },

@@ -2,8 +2,10 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import Login from './auth/Login'
 import ProtectedRoute from './components/ProtectedRoute'
 import Admin from './page/admin'
+import CargarArchivos from './page/admin/CargarArchivos'
+import Empleadores from './page/admin/Empleadores'
+import Titulados from './page/admin/Titulados'
 import Titulado from './page/titulado'
-import Dashboard from './feature/admin/dashboar/Dashboard'
 
 function App() {
 
@@ -20,8 +22,10 @@ function App() {
       {/* 3. Rutas Protegidas del Admin con Sidebar */}
       <Route element={<ProtectedRoute />}>
         <Route path="/admin" element={<Admin />}>
-          {/* Al entrar a /admin se muestra el Dashboard */}
-          <Route index element={<Dashboard />} />
+          <Route index element={<Navigate to="cargar" replace />} />
+          <Route path="cargar" element={<CargarArchivos />} />
+          <Route path="titulados" element={<Titulados />} />
+          <Route path="empleadores" element={<Empleadores />} />
         </Route>
       </Route>
 

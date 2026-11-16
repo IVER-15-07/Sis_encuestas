@@ -1,14 +1,26 @@
 package com.example.mi_backend.controller;
 
-import com.example.mi_backend.dto.ChiCuadradoResultDTO;
+import com.example.mi_backend.dto.TituladosFiltroDTO;
 import com.example.mi_backend.service.AnalisisService;
+import com.example.mi_backend.service.BrechasCompetenciasService;
+import com.example.mi_backend.service.CrucesYSimulacionService;
+import com.example.mi_backend.service.FormacionYFinanciamientoService;
+import com.example.mi_backend.service.PerfilEmpleabilidadService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -19,117 +31,209 @@ public class AnalisisController {
 
     private final AnalisisService analisisService;
     private final JdbcTemplate jdbcTemplate;
+    private final PerfilEmpleabilidadService perfilEmpleabilidadService;
+    private final FormacionYFinanciamientoService formacionYFinanciamientoService;
+    private final BrechasCompetenciasService brechasCompetenciasService;
+    private final CrucesYSimulacionService crucesYSimulacionService;
 
-    public AnalisisController(AnalisisService analisisService, JdbcTemplate jdbcTemplate) {
+    public AnalisisController(AnalisisService analisisService, JdbcTemplate jdbcTemplate,
+            PerfilEmpleabilidadService perfilEmpleabilidadService,
+            FormacionYFinanciamientoService formacionYFinanciamientoService,
+            BrechasCompetenciasService brechasCompetenciasService,
+            CrucesYSimulacionService crucesYSimulacionService) {
         this.analisisService = analisisService;
         this.jdbcTemplate = jdbcTemplate;
+        this.perfilEmpleabilidadService = perfilEmpleabilidadService;
+        this.formacionYFinanciamientoService = formacionYFinanciamientoService;
+        this.brechasCompetenciasService = brechasCompetenciasService;
+        this.crucesYSimulacionService = crucesYSimulacionService;
     }
 
-    // 1. Obtener la lista de archivos previamente cargados
+    // Cuerpo de error seguro: getMessage() puede ser null y Map.of lanzaría NPE
+    private Map<String, Object> errorBody(Exception e) {
+        Map<String, Object> error = new LinkedHashMap<String, Object>();
+        error.put("error", e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
+        return error;
+    }
+
+    // 1. Historial de archivos cargados
     @GetMapping("/importaciones/historial")
     public ResponseEntity<List<Map<String, Object>>> listarHistorialArchivos(
             @RequestParam(value = "tipo", defaultValue = "titulados") String tipo) {
-        String sql = "SELECT id, nombre_archivo, filas_cargadas, creado_en FROM importacion WHERE tipo_encuesta = ? ORDER BY creado_en DESC";
-        List<Map<String, Object>> archivos = jdbcTemplate.queryForList(sql, tipo);
-        return ResponseEntity.ok(archivos);
+        return ResponseEntity.ok(jdbcTemplate.queryForList(
+                "SELECT id, nombre_archivo, filas_leidas, filas_cargadas, filas_rechazadas, creado_en FROM public.importacion WHERE tipo_encuesta = ? ORDER BY creado_en DESC",
+                tipo));
     }
 
-    // 2. Cálculo de Chi-cuadrado filtrando opcionalmente por un archivo en
-    // específico
+    // 2. Catálogo de preguntas cruzables por encuesta ('titulados' o 'empleadores')
+    @GetMapping("/analisis/preguntas")
+    public ResponseEntity<List<Map<String, Object>>> listarPreguntas(
+            @RequestParam(value = "encuesta", defaultValue = "titulados") String encuesta) {
+        return ResponseEntity.ok(analisisService.listarPreguntas(encuesta));
+    }
+
+    // 3. Balance estadístico individual (frecuencias, %, promedio Likert)
+    @GetMapping("/analisis/balance/{preguntaCodigo}")
+    public ResponseEntity<?> balancePregunta(
+            @PathVariable String preguntaCodigo,
+            @RequestParam(value = "importacionId", required = false) Long importacionId) {
+        try {
+            return ResponseEntity.ok(analisisService.obtenerBalancePregunta(preguntaCodigo, importacionId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(errorBody(e));
+        }
+    }
+
+    // 4. Vista: Brechas de competencias y Valoración de Empleadores
+    @GetMapping("/analisis/brechas-valoracion")
+    public ResponseEntity<?> brechasYValoracion(
+            @RequestParam(value = "importacionTitId", required = false) Long importacionTitId,
+            @RequestParam(value = "importacionEmpId", required = false) Long importacionEmpId) {
+        return ResponseEntity.ok(analisisService.obtenerBrechasYValoracion(importacionTitId, importacionEmpId));
+    }
+
+    // 5. Vista: Simulación de escenarios
+    @GetMapping("/analisis/simulacion")
+    public ResponseEntity<?> simularEscenario(
+            @RequestParam(value = "deltaPasantiasPct", defaultValue = "15") double deltaPasantiasPct,
+            @RequestParam(value = "deltaPosgradoPct", defaultValue = "10") double deltaPosgradoPct,
+            @RequestParam(value = "importacionId", required = false) Long importacionId) {
+        return ResponseEntity.ok(analisisService.simularEscenario(deltaPasantiasPct, deltaPosgradoPct, importacionId));
+    }
+
+    // 6. Vista: Cruces y Chi-cuadrado (encuesta = 'titulados' o 'empleadores')
     @PostMapping("/analisis/chi-cuadrado")
     public ResponseEntity<?> calcularChi(
+            @RequestParam(value = "encuesta", defaultValue = "titulados") String encuesta,
             @RequestParam("variableFila") String variableFila,
             @RequestParam("variableColumna") String variableColumna,
             @RequestParam(value = "importacionId", required = false) Long importacionId) {
         try {
-            ChiCuadradoResultDTO resultado = analisisService.calcularChiCuadrado(variableFila, variableColumna,
-                    importacionId);
-            return ResponseEntity.ok(resultado);
+            return ResponseEntity.ok(
+                    analisisService.calcularCruceYChiCuadrado(encuesta, variableFila, variableColumna, importacionId));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().body(errorBody(e));
         }
     }
 
-    // 3. Exportar los datos guardados en formato CSV
-    @GetMapping("/exportar/titulados-csv")
-    public ResponseEntity<byte[]> exportarTituladosCsv(
-            @RequestParam(value = "importacionId", required = false) Long importacionId) {
-
-        StringBuilder sql = new StringBuilder("SELECT t.* FROM v_titulados_plano t ");
-        if (importacionId != null && importacionId > 0) {
-            sql.append("JOIN respuesta r ON r.id = t.id WHERE r.importacion_id = ").append(importacionId);
-        }
-
-        List<Map<String, Object>> filas = jdbcTemplate.queryForList(sql.toString());
-
-        StringBuilder csv = new StringBuilder();
-        if (!filas.isEmpty()) {
-            csv.append(String.join(",", filas.get(0).keySet())).append("\n");
-            for (Map<String, Object> fila : filas) {
-                String linea = fila.values().stream()
-                        .map(v -> v == null ? "" : "\"" + v.toString().replace("\"", "\"\"") + "\"")
-                        .collect(Collectors.joining(","));
-                csv.append(linea).append("\n");
-            }
-        }
-
-        byte[] bytes = csv.toString().getBytes(StandardCharsets.UTF_8);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=datos_titulados_supabase.csv")
-                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
-                .body(bytes);
-    }
-
+    // 7. Exportar matriz cruzada + Chi-cuadrado + V de Cramér en CSV
     @GetMapping("/exportar/matriz-cruzada-csv")
     public ResponseEntity<byte[]> exportarMatrizCruzadaCsv(
+            @RequestParam(value = "encuesta", defaultValue = "titulados") String encuesta,
             @RequestParam("variableFila") String variableFila,
             @RequestParam("variableColumna") String variableColumna,
             @RequestParam(value = "importacionId", required = false) Long importacionId) {
 
-        ChiCuadradoResultDTO dto = analisisService.calcularChiCuadrado(variableFila, variableColumna, importacionId);
+        Map<String, Object> dto = analisisService.calcularCruceYChiCuadrado(encuesta, variableFila, variableColumna,
+                importacionId);
+        @SuppressWarnings("unchecked")
+        List<String> catFila = (List<String>) dto.get("categoriasFila");
+        @SuppressWarnings("unchecked")
+        List<String> catCol = (List<String>) dto.get("categoriasColumna");
+        long[][] obs = (long[][]) dto.get("observados");
+        long[] totFila = (long[]) dto.get("totalesFila");
+        long[] totCol = (long[]) dto.get("totalesColumna");
 
         StringBuilder csv = new StringBuilder();
-
-        // Encabezado
         csv.append("\"").append(variableFila).append(" / ").append(variableColumna).append("\",");
-        csv.append(dto.getCategoriasColumna().stream().map(c -> "\"" + c + "\"").collect(Collectors.joining(",")));
+        csv.append(catCol.stream().map(c -> "\"" + c + "\"").collect(Collectors.joining(",")));
         csv.append(",\"Total Fila\"\n");
 
-        // Filas con valores y totales
-        long[] totalesColumna = new long[dto.getCategoriasColumna().size()];
-        long granTotal = 0;
-
-        for (int i = 0; i < dto.getCategoriasFila().size(); i++) {
-            csv.append("\"").append(dto.getCategoriasFila().get(i)).append("\",");
-            long sumaFila = 0;
-            for (int j = 0; j < dto.getCategoriasColumna().size(); j++) {
-                long val = dto.getObservados()[i][j];
-                csv.append(val).append(",");
-                sumaFila += val;
-                totalesColumna[j] += val;
+        for (int i = 0; i < catFila.size(); i++) {
+            csv.append("\"").append(catFila.get(i)).append("\",");
+            for (int j = 0; j < catCol.size(); j++) {
+                csv.append(obs[i][j]).append(",");
             }
-            csv.append(sumaFila).append("\n");
-            granTotal += sumaFila;
+            csv.append(totFila[i]).append("\n");
         }
 
-        // Fila final de totales por columna
         csv.append("\"Total Columna\",");
-        for (long tc : totalesColumna) {
+        for (long tc : totCol) {
             csv.append(tc).append(",");
         }
-        csv.append(granTotal).append("\n");
+        csv.append(dto.get("totalN")).append("\n\n");
 
-        // Metadatos de Chi-cuadrado para el informe
-        csv.append("\n\"--- METADATOS ESTADISTICOS ARCUSUR ---\"\n");
-        csv.append("\"Chi-cuadrado (Chi^2)\",").append(dto.getChiCuadrado()).append("\n");
-        csv.append("\"Grados de Libertad (gl)\",").append(dto.getGradosLibertad()).append("\n");
-        csv.append("\"p-valor\",").append(dto.getPValor()).append("\n");
+        csv.append("\"--- METADATOS ESTADISTICOS CEUB / ARCU-SUR ---\"\n");
+        csv.append("\"Chi-cuadrado (Chi^2)\",").append(dto.get("chiCuadrado")).append("\n");
+        csv.append("\"Grados de Libertad (gl)\",").append(dto.get("gradosLibertad")).append("\n");
+        csv.append("\"p-valor\",").append(dto.get("pValor")).append("\n");
+        csv.append("\"V de Cramer\",").append(dto.get("vCramer")).append("\n");
 
-        byte[] bytes = csv.toString().getBytes(StandardCharsets.UTF_8);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=matriz_cruzada_" + variableFila + "_" + variableColumna + ".csv")
+                        "attachment; filename=cruce_" + encuesta + "_" + variableFila + "_" + variableColumna + ".csv")
                 .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
-                .body(bytes);
+                .body(csv.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    // 8. Vistas de titulados con filtros (TituladosFiltroDTO)
+    @GetMapping("/analisis/titulados/perfil-empleabilidad")
+    public ResponseEntity<Map<String, Object>> perfilEmpleabilidad(
+            @ModelAttribute TituladosFiltroDTO filtro) {
+        return ResponseEntity.ok(perfilEmpleabilidadService.obtenerTodoPerfilEmpleabilidad(filtro));
+    }
+
+    @GetMapping("/analisis/titulados/perfil-empleabilidad-completo")
+    public ResponseEntity<Map<String, Object>> perfilEmpleabilidadCompleto(
+            @ModelAttribute TituladosFiltroDTO filtro) {
+        return ResponseEntity.ok(perfilEmpleabilidadService.obtenerTodoPerfilEmpleabilidad(filtro));
+    }
+
+    @GetMapping("/analisis/titulados/formacion-continua")
+    public ResponseEntity<Map<String, Object>> formacionContinua(
+            @ModelAttribute TituladosFiltroDTO filtro) {
+        return ResponseEntity.ok(formacionYFinanciamientoService.obtenerFormacionContinua(filtro));
+    }
+
+    @GetMapping("/analisis/titulados/formacion-continua-completa")
+    public ResponseEntity<Map<String, Object>> formacionContinuaCompleta(
+            @ModelAttribute TituladosFiltroDTO filtro) {
+        return ResponseEntity.ok(formacionYFinanciamientoService.obtenerFormacionContinua(filtro));
+    }
+
+    // Financiamiento (distribución + cruce dinámico + Kruskal-Wallis Monte Carlo)
+    @GetMapping("/analisis/titulados/financiamiento")
+    public ResponseEntity<Map<String, Object>> financiamiento(
+            @RequestParam(value = "columna", defaultValue = "nivel") String columna,
+            @ModelAttribute TituladosFiltroDTO filtro) {
+        return ResponseEntity.ok(formacionYFinanciamientoService.obtenerAnalisisFinanciamiento(columna, filtro));
+    }
+
+    @GetMapping("/analisis/titulados/brechas-competencias")
+    public ResponseEntity<Map<String, Object>> brechasCompetencias(
+            @ModelAttribute TituladosFiltroDTO filtro) {
+        return ResponseEntity.ok(brechasCompetenciasService.obtenerBrechasCompetencias(filtro));
+    }
+
+    // 9. Cruces avanzados y simulación Monte Carlo
+    @PostMapping("/analisis/cruce-avanzado")
+    public ResponseEntity<Map<String, Object>> cruceAvanzado(
+            @RequestParam(value = "encuesta", defaultValue = "titulados") String encuesta,
+            @RequestParam("variableFila") String variableFila,
+            @RequestParam("variableColumna") String variableColumna,
+            @ModelAttribute TituladosFiltroDTO filtro) {
+        try {
+            return ResponseEntity.ok(
+                    crucesYSimulacionService.calcularCruceAvanzado(encuesta, variableFila, variableColumna, filtro));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(errorBody(e));
+        }
+    }
+
+    @PostMapping("/analisis/simulacion/monte-carlo")
+    public ResponseEntity<Map<String, Object>> simularMonteCarlo(
+            @RequestParam("preguntaCodigo") String preguntaCodigo,
+            @RequestParam(value = "personasN", defaultValue = "100") int personasN,
+            @RequestParam(value = "replicasR", defaultValue = "1000") int replicasR,
+            @RequestParam(value = "semilla", defaultValue = "42") long semilla,
+            @RequestBody(required = false) Map<String, Double> probabilidadesPersonalizadasPct,
+            @ModelAttribute TituladosFiltroDTO filtro) {
+        try {
+            return ResponseEntity.ok(
+                    crucesYSimulacionService.simularMonteCarloTransformadaInversa(
+                            preguntaCodigo, personasN, replicasR, semilla, probabilidadesPersonalizadasPct, filtro));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(errorBody(e));
+        }
     }
 }

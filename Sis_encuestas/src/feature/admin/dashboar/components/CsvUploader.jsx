@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { importacionService } from '../../../../services/importacion';
 import { Upload, FileSpreadsheet, CheckCircle, AlertCircle } from 'lucide-react';
 
-export const CsvUploader = ({ onImportSuccess }) => {
-  const [tipo, setTipo] = useState('titulados');
+export const CsvUploader = ({ onImportSuccess, tipoFijo }) => {
+  const [tipoSeleccionado, setTipoSeleccionado] = useState(tipoFijo || 'titulados');
+  const tipo = tipoFijo || tipoSeleccionado;
   const [archivo, setArchivo] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [mensaje, setMensaje] = useState(null);
@@ -36,7 +37,7 @@ export const CsvUploader = ({ onImportSuccess }) => {
       setMensaje(resp);
       setArchivo(null);
       e.target.reset();
-      if (onImportSuccess) onImportSuccess(tipo);
+      if (onImportSuccess) await onImportSuccess(tipo, resp);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -58,15 +59,21 @@ export const CsvUploader = ({ onImportSuccess }) => {
           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#475569', marginBottom: '0.25rem' }}>
             Tipo de Encuesta:
           </label>
-          <select
-            value={tipo}
-            onChange={(e) => setTipo(e.target.value)}
-            disabled={cargando}
-            style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
-          >
-            <option value="titulados">Titulados (Sistemas)</option>
-            <option value="empleadores">Empleadores</option>
-          </select>
+          {tipoFijo ? (
+            <div style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1', color: '#334155' }}>
+              {tipoFijo === 'titulados' ? 'Titulados (Sistemas)' : 'Empleadores'}
+            </div>
+          ) : (
+            <select
+              value={tipo}
+              onChange={(e) => setTipoSeleccionado(e.target.value)}
+              disabled={cargando}
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+            >
+              <option value="titulados">Titulados (Sistemas)</option>
+              <option value="empleadores">Empleadores</option>
+            </select>
+          )}
         </div>
 
         <div>

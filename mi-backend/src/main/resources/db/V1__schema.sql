@@ -16,11 +16,13 @@ CREATE TABLE IF NOT EXISTS importacion (
 
 -- 2. Estructura de preguntas del Excel
 CREATE TABLE IF NOT EXISTS pregunta (
-    codigo      TEXT PRIMARY KEY,
-    encuesta    TEXT NOT NULL CHECK (encuesta IN ('titulados','empleadores')),
-    texto_forms TEXT NOT NULL,
-    tipo        TEXT NOT NULL CHECK (tipo IN ('unica','multiple','likert','numero','texto')),
-    destino     TEXT,
+    codigo         TEXT PRIMARY KEY,
+    encuesta       TEXT NOT NULL CHECK (encuesta IN ('titulados','empleadores')),
+    dimension      TEXT NOT NULL,
+    etiqueta_corta TEXT NOT NULL,
+    texto_forms    TEXT NOT NULL,
+    tipo           TEXT NOT NULL CHECK (tipo IN ('unica','multiple','likert','numero','texto')),
+    destino        TEXT,
     UNIQUE (encuesta, texto_forms)
 );
 
@@ -147,11 +149,11 @@ CREATE INDEX IF NOT EXISTS idx_resp_likert_preg_opcion ON respuesta_likert (preg
 CREATE INDEX IF NOT EXISTS idx_opcion_pregunta ON opcion (pregunta_codigo);
 
 -- 8. Datos Semilla (Preguntas y Opciones iniciales)
-INSERT INTO pregunta (codigo, encuesta, texto_forms, tipo, destino) VALUES
-    ('T_EDAD', 'titulados', 'Edad que tiene actualmente:', 'unica', 'titulado.edad_rango'),
-    ('T_GENERO', 'titulados', 'Género:', 'unica', 'titulado.genero'),
-    ('T_SATISFACCION_GLOBAL', 'titulados', 'De manera global ¿Cuál es el grado de satisfacción que ha desarrollado con la formación profesional recibida en la Carrera de Ingenieria de Sistemas', 'likert', 'respuesta_likert'),
-    ('E_CONF_CARRERA', 'empleadores', 'La Carrera de Ingeniería de Sistemas de la Universidad Mayor de San Simón brinda confianza a nuestra organización como formadora de profesionales del área tecnológica.', 'likert', 'respuesta_likert')
+INSERT INTO pregunta (codigo, encuesta, dimension, etiqueta_corta, texto_forms, tipo, destino) VALUES
+    ('T_EDAD', 'titulados', 'Perfil', 'Rango de edad', 'Edad que tiene actualmente:', 'unica', 'titulado.edad_rango'),
+    ('T_GENERO', 'titulados', 'Perfil', 'Género', 'Género:', 'unica', 'titulado.genero'),
+    ('T_SATISFACCION_GLOBAL', 'titulados', 'Satisfaccion', 'Satisfacción global con la formación', 'De manera global ¿Cuál es el grado de satisfacción que ha desarrollado con la formación profesional recibida en la Carrera de Ingenieria de Sistemas', 'likert', 'respuesta_likert'),
+    ('E_CONF_CARRERA', 'empleadores', 'Desempeno_Perfil', 'Confianza en la Carrera como formadora', 'La Carrera de Ingeniería de Sistemas de la Universidad Mayor de San Simón brinda confianza a nuestra organización como formadora de profesionales del área tecnológica.', 'likert', 'respuesta_likert')
 ON CONFLICT (codigo) DO NOTHING;
 
 -- Opciones para Titulados

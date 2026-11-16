@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { Building2, GraduationCap, Upload } from 'lucide-react'
 
 const Sidebar = () => {
   const { logout } = useAuth()
@@ -16,6 +17,12 @@ const Sidebar = () => {
         ? 'bg-[#152e59] text-white shadow-inner'
         : 'text-slate-400 hover:bg-[#121f38] hover:text-slate-200'
     }`
+
+  const menuItems = [
+    { to: '/admin/cargar', label: 'Cargar archivos', Icon: Upload },
+    { to: '/admin/titulados', label: 'Titulados', Icon: GraduationCap },
+    { to: '/admin/empleadores', label: 'Empleadores', Icon: Building2 },
+  ]
 
   return (
     <aside className="w-64 bg-[#0a1120] text-slate-300 flex flex-col justify-between h-screen sticky top-0 border-r border-[#15233e] select-none p-4">
@@ -53,36 +60,22 @@ const Sidebar = () => {
           </p>
 
           <nav className="space-y-1">
-            {/* 1. Resumen Ejecutivo (Inicio del Panel) */}
-            <NavLink to="/admin" end className={renderNavClasses}>
-              {({ isActive }) => (
-                <>
-                  {isActive && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-500 rounded-r-md" />
-                  )}
-
-                  <div className="flex items-center gap-3">
-                    <svg
-                      className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-slate-400'}`}
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                      />
-                    </svg>
-                    <span>Resumen Ejecutivo</span>
-                  </div>
-
-                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
-                </>
-              )}
-            </NavLink>
-
+            {menuItems.map(({ to, label, Icon }) => (
+              <NavLink key={to} to={to} className={renderNavClasses}>
+                {({ isActive }) => (
+                  <>
+                    {isActive && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-blue-500 rounded-r-md" />
+                    )}
+                    <div className="flex items-center gap-3">
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-blue-400' : 'text-slate-400'}`} />
+                      <span>{label}</span>
+                    </div>
+                    {isActive && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                  </>
+                )}
+              </NavLink>
+            ))}
           </nav>
         </div>
       </div>

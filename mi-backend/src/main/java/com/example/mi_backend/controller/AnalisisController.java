@@ -1,11 +1,13 @@
 package com.example.mi_backend.controller;
 
+import com.example.mi_backend.dto.EmpleadoresFiltroDTO;
 import com.example.mi_backend.dto.TituladosFiltroDTO;
 import com.example.mi_backend.service.AnalisisService;
 import com.example.mi_backend.service.BrechasCompetenciasService;
 import com.example.mi_backend.service.CrucesYSimulacionService;
 import com.example.mi_backend.service.FormacionYFinanciamientoService;
 import com.example.mi_backend.service.PerfilEmpleabilidadService;
+import com.example.mi_backend.service.EmpleadoresValoracionService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -35,18 +37,21 @@ public class AnalisisController {
     private final FormacionYFinanciamientoService formacionYFinanciamientoService;
     private final BrechasCompetenciasService brechasCompetenciasService;
     private final CrucesYSimulacionService crucesYSimulacionService;
+    private final EmpleadoresValoracionService empleadoresValoracionService;
 
     public AnalisisController(AnalisisService analisisService, JdbcTemplate jdbcTemplate,
             PerfilEmpleabilidadService perfilEmpleabilidadService,
             FormacionYFinanciamientoService formacionYFinanciamientoService,
             BrechasCompetenciasService brechasCompetenciasService,
-            CrucesYSimulacionService crucesYSimulacionService) {
+            CrucesYSimulacionService crucesYSimulacionService,
+            EmpleadoresValoracionService empleadoresValoracionService) {
         this.analisisService = analisisService;
         this.jdbcTemplate = jdbcTemplate;
         this.perfilEmpleabilidadService = perfilEmpleabilidadService;
         this.formacionYFinanciamientoService = formacionYFinanciamientoService;
         this.brechasCompetenciasService = brechasCompetenciasService;
         this.crucesYSimulacionService = crucesYSimulacionService;
+        this.empleadoresValoracionService = empleadoresValoracionService;
     }
 
     // Cuerpo de error seguro: getMessage() puede ser null y Map.of lanzaría NPE
@@ -235,5 +240,13 @@ public class AnalisisController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(errorBody(e));
         }
+    }
+
+    // Nuevo endpoint para añadir en AnalisisController.java
+    // Nuevo endpoint para añadir en AnalisisController.java
+    @GetMapping("/analisis/empleadores/valoracion-carrera")
+    public ResponseEntity<Map<String, Object>> valoracionCarreraEmpleadores(
+            @ModelAttribute EmpleadoresFiltroDTO filtro) {
+        return ResponseEntity.ok(empleadoresValoracionService.obtenerValoracionCarrera(filtro));
     }
 }

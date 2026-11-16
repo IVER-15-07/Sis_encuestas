@@ -8,6 +8,8 @@ import com.example.mi_backend.service.CrucesYSimulacionService;
 import com.example.mi_backend.service.FormacionYFinanciamientoService;
 import com.example.mi_backend.service.PerfilEmpleabilidadService;
 import com.example.mi_backend.service.EmpleadoresValoracionService;
+import com.example.mi_backend.service.EmpleadoresBrechasService;
+import com.example.mi_backend.service.EmpleadoresCrucesService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -38,13 +40,16 @@ public class AnalisisController {
     private final BrechasCompetenciasService brechasCompetenciasService;
     private final CrucesYSimulacionService crucesYSimulacionService;
     private final EmpleadoresValoracionService empleadoresValoracionService;
-
+    private final EmpleadoresBrechasService empleadoresBrechasService;
+    private final EmpleadoresCrucesService empleadoresCrucesService;
     public AnalisisController(AnalisisService analisisService, JdbcTemplate jdbcTemplate,
             PerfilEmpleabilidadService perfilEmpleabilidadService,
             FormacionYFinanciamientoService formacionYFinanciamientoService,
             BrechasCompetenciasService brechasCompetenciasService,
             CrucesYSimulacionService crucesYSimulacionService,
-            EmpleadoresValoracionService empleadoresValoracionService) {
+            EmpleadoresValoracionService empleadoresValoracionService,
+            EmpleadoresBrechasService empleadoresBrechasService,
+            EmpleadoresCrucesService empleadoresCrucesService) {
         this.analisisService = analisisService;
         this.jdbcTemplate = jdbcTemplate;
         this.perfilEmpleabilidadService = perfilEmpleabilidadService;
@@ -52,6 +57,8 @@ public class AnalisisController {
         this.brechasCompetenciasService = brechasCompetenciasService;
         this.crucesYSimulacionService = crucesYSimulacionService;
         this.empleadoresValoracionService = empleadoresValoracionService;
+        this.empleadoresBrechasService = empleadoresBrechasService;
+        this.empleadoresCrucesService = empleadoresCrucesService;
     }
 
     // Cuerpo de error seguro: getMessage() puede ser null y Map.of lanzaría NPE
@@ -248,5 +255,35 @@ public class AnalisisController {
     public ResponseEntity<Map<String, Object>> valoracionCarreraEmpleadores(
             @ModelAttribute EmpleadoresFiltroDTO filtro) {
         return ResponseEntity.ok(empleadoresValoracionService.obtenerValoracionCarrera(filtro));
+    }
+
+    // Nuevo endpoint para añadir en AnalisisController.java
+    @GetMapping("/analisis/empleadores/brechas-competencias")
+    public ResponseEntity<Map<String, Object>> brechasCompetenciasEmpleadores(
+            @ModelAttribute EmpleadoresFiltroDTO filtro) {
+        return ResponseEntity.ok(empleadoresBrechasService.obtenerBrechasCompetenciasEmpleadores(filtro));
+    }
+
+    // Nuevos endpoints para añadir en AnalisisController.java
+    @GetMapping("/analisis/empleadores/variables")
+    public ResponseEntity<List<Map<String, Object>>> listarVariablesEmpleadores() {
+        return ResponseEntity.ok(empleadoresCrucesService.listarVariablesCruzablesEmpleadores());
+    }
+
+    @PostMapping("/analisis/empleadores/cruce")
+    public ResponseEntity<Map<String, Object>> cruceEmpleadores(
+            @RequestParam("variableFila") String variableFila,
+            @RequestParam("variableColumna") String variableColumna,
+            @ModelAttribute EmpleadoresFiltroDTO filtro) {
+        try {
+            Map<String, Object> res = empleadoresCrucesService.calcularCruceEmpleadores(
+                variableFila, variableColumna, filtro
+            );
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            Map<String, Object> err = new LinkedHashMap<String, Object>();
+            err.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(err);
+        }
     }
 }

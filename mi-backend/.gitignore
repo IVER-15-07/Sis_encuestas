@@ -31,3 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Variables privadas de despliegue
+.env
+.env.*
+!.env.example

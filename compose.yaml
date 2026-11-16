@@ -1,0 +1,20 @@
+services:
+  backend:
+    build:
+      context: ./mi-backend
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:?Define SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:?Define SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?Define SPRING_DATASOURCE_PASSWORD}
+    expose:
+      - "8282"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./Sis_encuestas
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    restart: unless-stopped

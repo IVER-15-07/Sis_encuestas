@@ -1,0 +1,9 @@
+# Variables privadas de despliegue
+.env
+.env.*
+!.env.example
+
+# Artefactos locales
+mi-backend/target/
+Sis_encuestas/node_modules/
+Sis_encuestas/dist/

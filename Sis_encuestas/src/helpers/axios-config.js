@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:8282',
-  timeout: 60000,
+  baseURL: import.meta.env.VITE_API_URL || '',
+  timeout: 80000,
 });
 
 // Interceptor para inyectar automáticamente el token en cada petición
